@@ -9,12 +9,34 @@ A modern, feature-rich terminal application built with Electron, designed to enh
 - ⚡ Quick commands menu with customizable categories
 - 🎨 Clean, minimal design with proper spacing and readability
 - 🌙 Dark mode optimized interface
-- 💾 Persistent command history
+- 💾 Persistent command history and settings
 - ⌨️ Keyboard shortcuts for common actions
 - 📋 Copy/paste support with proper formatting
 - 🔍 Search through command history
-- 📁 File system navigation
+- 📁 Advanced file system navigation with built-in commands
 - 🎯 Smart command suggestions
+- ⚙️ Customizable settings with persistent storage
+- 🔄 Command aliases support
+- 📌 Directory bookmarks
+
+## Built-in Commands
+
+### Navigation Commands
+- `..` - Move up one directory
+- `...` - Move up two directories
+- `home` - Go to user's home directory
+
+### Alias Commands
+- `alias list` - Show all defined aliases
+- `alias add [name] [command]` - Add a new alias
+- `alias remove [name]` - Remove an existing alias
+
+### Default Aliases
+- `ll` or `ls` -> `dir`
+- `clear` -> `cls`
+- `desktop` -> `cd [Desktop path]`
+- `downloads` -> `cd [Downloads path]`
+- `documents` -> `cd [Documents path]`
 
 ## Installation
 
@@ -45,6 +67,7 @@ npm start
 - Use Up/Down arrows to cycle through previous commands
 - Click the history button to view full command history
 - Search through history with real-time filtering
+- History is automatically saved and persists between sessions
 
 ### Keyboard Shortcuts
 - `Up/Down Arrow`: Navigate command history
@@ -52,6 +75,13 @@ npm start
 - `Ctrl+C`: Copy selected text
 - `Ctrl+V`: Paste text
 - `Esc`: Close active menus
+
+### Settings
+- Font size and family customization
+- Background and text color options
+- Clear on close option
+- Command history size limit
+- Default directory configuration
 
 ## Development
 
@@ -75,8 +105,16 @@ electron-advanced-terminal/
 ├── renderer.js       # Renderer process and UI logic
 ├── index.html        # Main application window
 ├── styles.css        # Application styling
+├── settings.html     # Settings window
 └── package.json      # Project dependencies and scripts
 ```
+
+### Configuration Files
+The application stores its configuration in the following locations:
+- Settings: `~/.terminal_config/settings.json`
+- Window State: `~/.terminal_config/window-state.json`
+- Command History: `~/.terminal_config/command_history.json`
+- Aliases: `~/.terminal_aliases`
 
 ## Contributing
 

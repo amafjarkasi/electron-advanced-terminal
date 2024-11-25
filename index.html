@@ -5,6 +5,7 @@
     <title>Advanced Terminal</title>
     <link rel="stylesheet" href="styles.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com; img-src 'self'; connect-src 'self'; font-src 'self' https://cdnjs.cloudflare.com;">
 </head>
 <body>
     <div class="container">
@@ -92,6 +93,12 @@
                 <span class="status-item encoding">UTF-8</span>
             </div>
         </div>
+    </div>
+    <div id="settings-window" class="settings-window" style="display: none;">
+        <h2>Project Settings</h2>
+        <p>Adjust your project settings below:</p>
+        <label for="setting1">Setting 1:</label>
+        <input type="text" id="setting1" name="setting1"><br>
     </div>
     <script src="renderer.js"></script>
 </body>

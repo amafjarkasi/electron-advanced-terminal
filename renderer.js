@@ -1,12 +1,70 @@
+console.log('Script loaded'); // Verify script loading
+
 const { ipcRenderer } = require('electron');
+const remote = require('@electron/remote');
 const os = require('os');
 const path = require('path');
 const fs = require('fs').promises;
+
+// Constants for terminal settings
+const CONFIG_FILE = path.join(os.homedir(), '.terminal_config', 'settings.json');
+const DEFAULT_SETTINGS = {
+    defaultDirectory: os.homedir(),
+    fontSize: 14,
+    fontFamily: 'Consolas',
+    backgroundColor: '#1e1e1e',
+    textColor: '#ffffff',
+    clearOnClose: false,
+    saveHistory: true,
+    historySize: 1000
+};
+
+// Load and apply settings
+async function loadAndApplySettings() {
+    try {
+        const settings = await ipcRenderer.invoke('get-settings');
+        applySettings(settings);
+    } catch (error) {
+        console.error('Error loading settings:', error);
+    }
+}
+
+// Apply settings to terminal
+function applySettings(settings) {
+    if (!settings) return;
+
+    // Apply terminal settings
+    if (settings.defaultDirectory) {
+        currentDirectory = settings.defaultDirectory;
+        updatePrompt();
+    }
+
+    if (settings.fontSize) {
+        terminalOutput.style.fontSize = `${settings.fontSize}px`;
+    }
+
+    if (settings.fontFamily) {
+        terminalOutput.style.fontFamily = settings.fontFamily;
+    }
+
+    if (settings.backgroundColor) {
+        terminalOutput.style.backgroundColor = settings.backgroundColor;
+    }
+
+    if (settings.textColor) {
+        terminalOutput.style.color = settings.textColor;
+    }
+
+    // Apply behavior settings
+    clearOnClose = settings.clearOnClose || false;
+    shouldSaveHistory = settings.saveHistory || true;
+}
 
 // Terminal state
 let commandHistory = [];
 let historyPosition = -1;
 let currentDirectory = os.homedir();
+let shouldSaveHistory = true; // Default to true
 let searchMode = false;
 let searchBuffer = '';
 let matchedCommands = [];
@@ -21,17 +79,40 @@ const HISTORY_FILE = path.join(CONFIG_DIR, 'command_history.json');
 const ALIASES_FILE = path.join(os.homedir(), '.terminal_aliases');
 
 // Default aliases
-let commandAliases = {
+const commandAliases = {
     'll': 'dir',
     'ls': 'dir',
     'clear': 'cls',
     '..': 'cd ..',
     '...': 'cd ../..',
-    'home': `cd ${os.homedir()}`,
-    'desktop': `cd ${path.join(os.homedir(), 'Desktop')}`,
-    'downloads': `cd ${path.join(os.homedir(), 'Downloads')}`,
-    'documents': `cd ${path.join(os.homedir(), 'Documents')}`,
+    'home': `cd "${os.homedir()}"`,
+    'desktop': `cd "${path.join(os.homedir(), 'Desktop')}"`,
+    'downloads': `cd "${path.join(os.homedir(), 'Downloads')}"`,
+    'documents': `cd "${path.join(os.homedir(), 'Documents')}"`,
 };
+
+// Load aliases from file
+async function loadAliases() {
+    try {
+        const data = await fs.readFile(ALIASES_FILE, 'utf8');
+        const loadedAliases = JSON.parse(data);
+        Object.assign(commandAliases, loadedAliases);
+        console.log('Loaded aliases:', Object.keys(commandAliases).length);
+    } catch (error) {
+        console.log('No previous aliases found');
+    }
+}
+
+// Save aliases to file
+async function saveAliases() {
+    try {
+        await fs.mkdir(path.dirname(ALIASES_FILE), { recursive: true });
+        await fs.writeFile(ALIASES_FILE, JSON.stringify(commandAliases, null, 2));
+        console.log('Saved aliases:', Object.keys(commandAliases).length);
+    } catch (error) {
+        console.error('Failed to save aliases:', error);
+    }
+}
 
 // Directory bookmarks
 let directoryBookmarks = new Map();
@@ -98,26 +179,8 @@ function addToHistory(command) {
     }
     
     historyPosition = commandHistory.length;
-    saveCommandHistory();
-}
-
-// Load aliases from file
-async function loadAliases() {
-    try {
-        const data = await fs.readFile(ALIASES_FILE, 'utf8');
-        const loadedAliases = JSON.parse(data);
-        commandAliases = { ...commandAliases, ...loadedAliases };
-    } catch (error) {
-        // File doesn't exist yet, that's okay
-    }
-}
-
-// Save aliases to file
-async function saveAliases() {
-    try {
-        await fs.writeFile(ALIASES_FILE, JSON.stringify(commandAliases, null, 2));
-    } catch (error) {
-        console.error('Failed to save aliases:', error);
+    if (shouldSaveHistory) {
+        saveCommandHistory();
     }
 }
 
@@ -149,41 +212,34 @@ function appendToTerminal(text, isError = false) {
 
 // Command execution
 async function executeCommand(command) {
-    // Add newline before each command
-    appendToTerminal('\n');
-    
-    const fullPrompt = `${os.userInfo().username}@${os.hostname()}:${currentDirectory}$ ${command}\n`;
-    appendToTerminal(fullPrompt);
-
-    // Add to history before execution
-    addToHistory(command);
-
-    // Handle built-in commands first
-    if (await handleBuiltInCommands(command)) {
-        // Add newline after built-in commands
-        appendToTerminal('\n');
-        return;
-    }
-
-    // Check for aliases and expand them
-    const args = command.split(' ');
-    const cmd = args[0].toLowerCase();
-    if (commandAliases[cmd]) {
-        const aliasedCmd = commandAliases[cmd];
-        // Handle additional arguments if any
-        const additionalArgs = args.slice(1);
-        command = additionalArgs.length > 0 
-            ? `${aliasedCmd} ${additionalArgs.join(' ')}` 
-            : aliasedCmd;
-        appendToTerminal(`Expanding alias: ${command}\n`);
-    }
-    
     try {
+        // Trim the command and skip if empty
+        command = command.trim();
+        if (!command) return;
+
+        // Check for aliases first
+        const parts = command.split(/\s+/);
+        const firstWord = parts[0].toLowerCase();
+        if (commandAliases[firstWord]) {
+            const aliasCommand = commandAliases[firstWord];
+            command = aliasCommand + (parts.length > 1 ? ' ' + parts.slice(1).join(' ') : '');
+            appendToTerminal(`> ${command}\n`);
+        }
+
+        // Handle built-in commands
+        const isBuiltIn = await handleBuiltInCommands(command);
+        if (isBuiltIn) {
+            addToHistory(command);
+            updateHistoryList();
+            return;
+        }
+
+        // Execute external command
         const result = await ipcRenderer.invoke('run-terminal-command', command);
+
         if (result.success) {
-            if (result.output) {
+            if (result.output && result.output.trim()) {
                 appendToTerminal(result.output);
-                // Add newline if output doesn't end with one
                 if (!result.output.endsWith('\n')) {
                     appendToTerminal('\n');
                 }
@@ -192,16 +248,15 @@ async function executeCommand(command) {
             if (command.toLowerCase().startsWith('cd ')) {
                 currentDirectory = await ipcRenderer.invoke('get-current-directory');
                 updatePrompt();
+                appendToTerminal(`Directory changed to: ${currentDirectory}\n`);
             }
         } else {
-            appendToTerminal(result.error, true);
-            // Add newline if error doesn't end with one
-            if (!result.error.endsWith('\n')) {
-                appendToTerminal('\n');
-            }
+            appendToTerminal(result.error || 'Command failed', true);
+            appendToTerminal('\n');
         }
         
-        // Update history list
+        // Add to history
+        addToHistory(command);
         updateHistoryList();
     } catch (error) {
         appendToTerminal(`Error: ${error.message}\n`, true);
@@ -210,29 +265,88 @@ async function executeCommand(command) {
 
 // Handle built-in commands
 async function handleBuiltInCommands(command) {
-    const args = command.split(' ');
+    const args = command.trim().split(/\s+/);
     const cmd = args[0].toLowerCase();
 
     switch(cmd) {
+        case '..':
+            try {
+                await ipcRenderer.invoke('run-terminal-command', 'cd ..');
+                currentDirectory = await ipcRenderer.invoke('get-current-directory');
+                updatePrompt();
+                appendToTerminal(`Directory changed to: ${currentDirectory}\n`);
+                return true;
+            } catch (error) {
+                appendToTerminal(`Failed to change directory: ${error.message}\n`, true);
+                return true;
+            }
+
+        case '...':
+            try {
+                await ipcRenderer.invoke('run-terminal-command', 'cd ../..');
+                currentDirectory = await ipcRenderer.invoke('get-current-directory');
+                updatePrompt();
+                appendToTerminal(`Directory changed to: ${currentDirectory}\n`);
+                return true;
+            } catch (error) {
+                appendToTerminal(`Failed to change directory: ${error.message}\n`, true);
+                return true;
+            }
+
+        case 'home':
+            try {
+                const homeDir = os.homedir();
+                await ipcRenderer.invoke('run-terminal-command', `cd "${homeDir}"`);
+                currentDirectory = await ipcRenderer.invoke('get-current-directory');
+                updatePrompt();
+                appendToTerminal(`Directory changed to: ${currentDirectory}\n`);
+                return true;
+            } catch (error) {
+                appendToTerminal(`Failed to change directory: ${error.message}\n`, true);
+                return true;
+            }
+
         case 'alias':
-            if (args[1] === 'list') {
+            if (args.length === 1 || args[1] === 'list') {
                 appendToTerminal('\nAvailable aliases:\n');
                 Object.entries(commandAliases).forEach(([alias, cmd]) => {
                     appendToTerminal(`${alias} -> ${cmd}\n`);
                 });
                 return true;
-            } else if (args[1] === 'add' && args[2]) {
-                const [name, ...value] = args[2].split('=');
+            } else if (args[1] === 'add' && args.length > 2) {
+                // Join remaining arguments to handle equals signs and spaces
+                const aliasString = args.slice(2).join(' ');
+                const [name, ...value] = aliasString.split('=');
                 if (name && value.length) {
-                    commandAliases[name] = value.join('=');
+                    const trimmedName = name.trim();
+                    const trimmedValue = value.join('=').trim();
+                    commandAliases[trimmedName] = trimmedValue;
                     await saveAliases();
-                    appendToTerminal(`Alias '${name}' created\n`);
+                    appendToTerminal(`Alias '${trimmedName}' created -> ${trimmedValue}\n`);
                 } else {
                     appendToTerminal('Usage: alias add name=command\n', true);
                 }
                 return true;
+            } else if (args[1] === 'remove' && args[2]) {
+                const name = args[2].trim();
+                if (commandAliases[name]) {
+                    delete commandAliases[name];
+                    await saveAliases();
+                    appendToTerminal(`Alias '${name}' removed\n`);
+                } else {
+                    appendToTerminal(`Alias '${name}' not found\n`, true);
+                }
+                return true;
+            } else if (args[1] === 'help') {
+                appendToTerminal('\nAlias Commands:\n');
+                appendToTerminal('  alias list          - List all aliases\n');
+                appendToTerminal('  alias add name=cmd  - Create new alias\n');
+                appendToTerminal('  alias remove name   - Remove an alias\n');
+                appendToTerminal('  alias help          - Show this help\n');
+                return true;
             }
-            break;
+            appendToTerminal('Unknown alias command. Try "alias help" for usage.\n', true);
+            return true;
 
         case 'bookmark':
             if (args[1] === 'add' && args[2]) {
@@ -273,6 +387,11 @@ async function handleBuiltInCommands(command) {
                 return true;
             }
             break;
+
+        case 'clear':
+        case 'cls':
+            terminalOutput.innerHTML = '';
+            return true;
     }
 
     return false;
@@ -471,10 +590,8 @@ quickCommandsMenu.addEventListener('click', (e) => {
 });
 
 // Settings button click handler
-document.getElementById('settingsBtn').addEventListener('click', (e) => {
-    e.stopPropagation();
-    // TODO: Implement settings functionality
-    console.log('Settings clicked');
+document.getElementById('settingsBtn').addEventListener('click', function() {
+    ipcRenderer.send('open-settings-window');
 });
 
 // Event Listeners
@@ -502,11 +619,15 @@ terminalInput.addEventListener('keydown', async (e) => {
         }
 
         if (e.key === 'Enter') {
+            e.preventDefault();
             searchMode = false;
             if (matchedCommands.length > 0) {
-                terminalInput.value = matchedCommands[matchIndex];
+                const command = matchedCommands[matchIndex];
+                terminalInput.value = '';
+                appendToTerminal(`\n${os.userInfo().username}@${os.hostname()}:${currentDirectory}$ ${command}\n`);
+                await executeCommand(command);
+                updatePrompt();
             }
-            appendToTerminal('\n');
             return;
         }
 
@@ -527,11 +648,15 @@ terminalInput.addEventListener('keydown', async (e) => {
     if (e.key === 'Enter') {
         e.preventDefault();
         const command = terminalInput.value.trim();
+        terminalInput.value = '';
         
         if (command) {
+            appendToTerminal(`\n${os.userInfo().username}@${os.hostname()}:${currentDirectory}$ ${command}\n`);
             await executeCommand(command);
-            terminalInput.value = '';
+        } else {
+            appendToTerminal('\n');
         }
+        updatePrompt();
     } else if (e.key === 'ArrowUp') {
         e.preventDefault();
         if (historyPosition > 0) {
@@ -599,3 +724,18 @@ async function initializeTerminal() {
 }
 
 initializeTerminal();
+
+// Listen for settings updates
+ipcRenderer.on('apply-terminal-settings', (event, settings) => {
+    applySettings(settings);
+});
+
+// Initialize settings when window loads
+window.addEventListener('load', loadAndApplySettings);
+
+// Listen for directory requests
+ipcRenderer.on('get-current-directory', () => {
+    ipcRenderer.send('current-directory-response', currentDirectory);
+});
+
+// Update current directory display

@@ -312,28 +312,33 @@ body {
 }
 
 .control-button {
-    background: transparent;
-    border: none;
-    color: var(--text-color);
     width: 46px;
     height: 32px;
+    border: none;
+    background: transparent;
+    color: var(--text-color);
     display: flex;
-    align-items: center;
     justify-content: center;
+    align-items: center;
     cursor: pointer;
-    opacity: 0.8;
 }
 
 .control-button i {
-    font-size: 10px;
-    width: 10px;
-    height: 10px;
-    line-height: 10px;
-    text-align: center;
+    font-size: 12px;
 }
 
 .control-button.minimize i {
     margin-top: 2px;
+}
+
+.control-button:hover,
+.window-controls .control-button:hover,
+.window-controls .control-button.minimize:hover,
+.window-controls .control-button.maximize:hover,
+.window-controls .control-button.close:hover,
+.settings-window .control-button:hover,
+.window-controls .control-button.close:hover {
+    background: transparent;
 }
 
 .quick-commands-menu {
@@ -527,4 +532,210 @@ body {
     --border-color: #003b00;
     --toolbar-bg: #001a00;
     --status-bar-bg: #005000;
+}
+
+.settings-window {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: var(--bg-color);
+    color: var(--text-color);
+    border-radius: 6px;
+    z-index: 1000;
+    border: 1px solid var(--border-color);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+}
+
+.settings-window .titlebar {
+    height: 32px;
+    background: var(--titlebar-bg);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0;
+    -webkit-app-region: drag;
+    border-bottom: 1px solid var(--border-color);
+    backdrop-filter: blur(10px);
+    flex-shrink: 0;
+}
+
+.settings-window .drag-region {
+    flex: 1;
+    padding-left: 12px;
+    font-size: 12px;
+    opacity: 0.8;
+}
+
+.settings-window .window-controls {
+    display: flex;
+    -webkit-app-region: no-drag;
+}
+
+.settings-window .window-controls .control-button {
+    width: 46px;
+    height: 32px;
+    border: none;
+    background: transparent;
+    color: var(--text-color);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    cursor: pointer;
+}
+
+.settings-window .window-controls .control-button i {
+    font-size: 12px;
+}
+
+.settings-window .window-controls .control-button.minimize i {
+    margin-top: 2px;
+}
+
+.settings-window .window-controls .control-button:hover,
+.settings-window .window-controls .control-button.minimize:hover,
+.settings-window .window-controls .control-button.close:hover {
+    background: transparent;
+}
+
+.settings-window .content {
+    flex: 1;
+    padding: 16px;
+    overflow-y: auto;
+    color: var(--text-color);
+}
+
+.settings-section {
+    max-width: 600px;
+    margin: 0 auto;
+}
+
+.settings-section h2 {
+    margin: 0 0 16px 0;
+    font-size: 1.5em;
+    color: var(--text-color);
+}
+
+.setting-group {
+    margin-bottom: 16px;
+    padding: 12px;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 6px;
+}
+
+.setting-group h3 {
+    margin: 0 0 12px 0;
+    font-size: 1.1em;
+    color: var(--text-color);
+}
+
+.setting-item {
+    margin-bottom: 12px;
+}
+
+.setting-item:last-child {
+    margin-bottom: 0;
+}
+
+.setting-item label {
+    display: block;
+    margin-bottom: 4px;
+    color: var(--text-color);
+    font-size: 13px;
+}
+
+.setting-item input[type="text"],
+.setting-item input[type="number"],
+.setting-item select {
+    width: 100%;
+    padding: 6px 8px;
+    border: 1px solid var(--border-color);
+    background: var(--bg-color);
+    color: var(--text-color);
+    border-radius: 4px;
+    font-size: 13px;
+    height: 32px;
+    box-sizing: border-box;
+}
+
+.setting-item input[type="color"] {
+    width: 100%;
+    height: 32px;
+    padding: 2px;
+    border: 1px solid var(--border-color);
+    background: var(--bg-color);
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+.setting-item .checkbox-label {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    cursor: pointer;
+    font-size: 13px;
+    margin: 4px 0;
+}
+
+.setting-item .checkbox-label input[type="checkbox"] {
+    width: 14px;
+    height: 14px;
+    margin: 0;
+}
+
+.input-with-button {
+    display: flex;
+    gap: 6px;
+    align-items: stretch;
+}
+
+.input-with-button input {
+    flex: 1;
+}
+
+.input-with-button .browse-button {
+    padding: 0 10px;
+    background: var(--control-hover);
+    border: 1px solid var(--border-color);
+    color: var(--text-color);
+    border-radius: 4px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 32px;
+    height: 32px;
+    box-sizing: border-box;
+}
+
+.input-with-button .browse-button i {
+    font-size: 13px;
+}
+
+.settings-window h2 {
+    margin-top: 0;
+    margin-bottom: 16px;
+    font-size: 14px;
+    font-weight: 500;
+}
+
+.settings-window label {
+    display: block;
+    margin-bottom: 8px;
+    font-size: 12px;
+    opacity: 0.8;
+}
+
+.settings-window input {
+    width: 100%;
+    padding: 8px;
+    margin-bottom: 16px;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    background-color: var(--input-background);
+    color: var(--text-color);
+    font-size: 12px;
 }

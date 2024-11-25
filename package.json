@@ -16,6 +16,7 @@
   "author": "Your Name",
   "license": "ISC",
   "dependencies": {
+    "@electron/remote": "^2.1.2",
     "axios": "^1.4.0",
     "electron": "^25.0.1",
     "node-fetch": "^3.3.1",

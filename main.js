@@ -6,6 +6,10 @@ const axios = require('axios');
 const simpleGit = require('simple-git');
 const si = require('systeminformation');
 const os = require('os');
+const dialog = require('electron').dialog;
+
+// Initialize @electron/remote
+require('@electron/remote/main').initialize();
 
 // Enable hot reload for development
 try {
@@ -77,10 +81,9 @@ async function createWindow() {
 
     mainWindow.loadFile('index.html');
     
-    // Check if --dev-tools flag is present
-    if (process.argv.includes('--dev-tools')) {
+    mainWindow.webContents.on('did-finish-load', () => {
         mainWindow.webContents.openDevTools();
-    }
+    });
 
     // Add keyboard shortcut for DevTools
     mainWindow.webContents.on('before-input-event', (event, input) => {
@@ -251,45 +254,32 @@ ipcMain.handle('get-current-directory', () => {
 
 ipcMain.handle('run-terminal-command', async (event, command) => {
     try {
-        // Handle CD commands specially to track directory changes
-        const cdMatch = command.match(/^cd\s+(.+)/i);
-        if (cdMatch) {
-            let newPath = cdMatch[1].trim();
+        // Handle CD commands specially
+        if (command.toLowerCase().startsWith('cd ')) {
+            const newPath = command.slice(3).trim().replace(/^["']|["']$/g, '');
+            const targetPath = path.resolve(currentDirectory, newPath);
             
-            // Handle home directory shortcut
-            newPath = newPath.replace(/^~/, os.homedir());
-            
-            // Resolve the path
-            let targetPath = path.isAbsolute(newPath) 
-                ? newPath 
-                : path.resolve(currentDirectory, newPath);
-
-            // Remove any quotes that might have been added
-            targetPath = targetPath.replace(/['"]/g, '');
-
             try {
-                // Verify the path exists and is accessible
-                await require('fs').promises.access(targetPath);
+                // Use fs.stat instead of fs.access to ensure it's a directory
+                const stats = await fs.stat(targetPath);
+                if (!stats.isDirectory()) {
+                    return { success: false, error: 'Not a directory' };
+                }
                 currentDirectory = targetPath;
-                return {
-                    success: true,
-                    output: ''
-                };
+                return { success: true, output: '' };
             } catch (error) {
-                return {
-                    success: false,
-                    error: `The system cannot find the path specified: ${targetPath}\n`
-                };
+                return { success: false, error: 'Directory not found' };
             }
         }
 
-        // For all other commands
+        // For all other commands, use PowerShell
         return new Promise((resolve) => {
             const { exec } = require('child_process');
-            exec(command, { 
-                cwd: currentDirectory,
-                windowsHide: true
-            }, (error, stdout, stderr) => {
+            // Use proper PowerShell escaping for paths with spaces
+            const escapedPath = currentDirectory.replace(/'/g, "''");
+            const psCommand = `powershell.exe -NoProfile -Command "& {Set-Location '${escapedPath}'; ${command}}"`;
+            
+            exec(psCommand, (error, stdout, stderr) => {
                 if (error) {
                     resolve({
                         success: false,
@@ -309,6 +299,138 @@ ipcMain.handle('run-terminal-command', async (event, command) => {
             error: error.message
         };
     }
+});
+
+// Settings management
+const CONFIG_FILE = path.join(app.getPath('userData'), 'settings.json');
+const DEFAULT_SETTINGS = {
+    defaultDirectory: app.getPath('home'),
+    fontSize: 14,
+    fontFamily: 'Consolas',
+    backgroundColor: '#000000',
+    textColor: '#ffffff',
+    clearOnClose: false,
+    saveCommandHistory: true
+};
+
+async function loadSettings() {
+    try {
+        await fs.access(CONFIG_FILE);
+        const data = await fs.readFile(CONFIG_FILE, 'utf8');
+        return { ...DEFAULT_SETTINGS, ...JSON.parse(data) };
+    } catch (error) {
+        return DEFAULT_SETTINGS;
+    }
+}
+
+async function saveSettings(settings) {
+    try {
+        await fs.mkdir(path.dirname(CONFIG_FILE), { recursive: true });
+        await fs.writeFile(CONFIG_FILE, JSON.stringify(settings, null, 2));
+        if (mainWindow && mainWindow.webContents) {
+            mainWindow.webContents.send('apply-terminal-settings', settings);
+        }
+        return true;
+    } catch (error) {
+        console.error('Failed to save settings:', error);
+        return false;
+    }
+}
+
+// IPC handlers for settings
+ipcMain.handle('get-settings', async () => {
+    return await loadSettings();
+});
+
+ipcMain.handle('save-settings', async (event, settings) => {
+    return await saveSettings(settings);
+});
+
+ipcMain.handle('open-directory-dialog', async () => {
+    const result = await dialog.showOpenDialog({
+        properties: ['openDirectory']
+    });
+    return result.canceled ? 'canceled' : result.filePaths[0];
+});
+
+// Handle settings updates
+ipcMain.on('settings-updated', async (event, settings) => {
+    try {
+        // Apply settings to terminal
+        if (mainWindow && mainWindow.webContents) {
+            mainWindow.webContents.send('apply-terminal-settings', settings);
+        }
+    } catch (error) {
+        console.error('Error applying settings:', error);
+    }
+});
+
+// Keep track of settings window
+let settingsWindow = null;
+
+ipcMain.on('open-settings-window', () => {
+    if (settingsWindow) {
+        // If window exists, hide it first then close it
+        settingsWindow.hide();
+        settingsWindow.close();
+        settingsWindow = null;
+        return;
+    }
+
+    // Get main window bounds to center settings window
+    const mainBounds = mainWindow.getBounds();
+    const settingsWidth = 500;
+    const settingsHeight = 600;
+
+    // Calculate center position relative to main window
+    const x = Math.round(mainBounds.x + (mainBounds.width - settingsWidth) / 2);
+    const y = Math.round(mainBounds.y + (mainBounds.height - settingsHeight) / 2);
+
+    // Create new settings window
+    settingsWindow = new BrowserWindow({
+        width: settingsWidth,
+        height: settingsHeight,
+        x: x,
+        y: y,
+        title: 'Settings',
+        frame: false,
+        transparent: false,
+        resizable: false,
+        backgroundColor: '#1e1e1e',
+        parent: mainWindow,
+        modal: true,
+        webPreferences: {
+            nodeIntegration: true,
+            contextIsolation: false,
+            enableRemoteModule: true
+        },
+        show: false
+    });
+
+    // Enable remote module
+    require('@electron/remote/main').enable(settingsWindow.webContents);
+    
+    settingsWindow.loadFile('settings.html');
+    settingsWindow.setMenu(null);
+
+    // Show window when ready
+    settingsWindow.once('ready-to-show', () => {
+        settingsWindow.show();
+    });
+
+    // Handle close button click
+    ipcMain.once('close-settings-window', () => {
+        if (settingsWindow) {
+            settingsWindow.hide();
+            settingsWindow.close();
+            settingsWindow = null;
+        }
+    });
+
+    // Handle window close
+    settingsWindow.on('closed', () => {
+        settingsWindow = null;
+    });
 });
 
 app.on('window-all-closed', () => {
