@@ -76,22 +76,22 @@ body {
 
 .terminal-output {
     flex: 1;
-    padding: 12px;
     overflow-y: auto;
+    padding: 8px;
     font-family: 'Consolas', monospace;
-    font-size: 14px;
+    white-space: pre-wrap;
+    word-wrap: break-word;
     line-height: 1.4;
-    color: var(--text-color);
+}
+
+.terminal-output span {
+    display: block;
     white-space: pre-wrap;
     word-wrap: break-word;
 }
 
-.terminal-output span {
-    font-family: inherit;
-}
-
 .terminal-output .error {
-    color: #ff5555;
+    color: #ff4444;
 }
 
 .input-wrapper {
@@ -354,9 +354,7 @@ body {
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
     z-index: 1000;
     backdrop-filter: blur(4px);
-    margin-bottom: 5px;
-    opacity: 0;
-    transition: opacity 0.15s ease-out;
+    margin-bottom: 0; /* Remove bottom margin to align with UI */
 }
 
 .quick-commands-menu.show {
@@ -366,7 +364,7 @@ body {
 
 .menu-category {
     position: relative;
-    padding: 6px 12px;
+    padding: 8px 16px; /* Adjust padding for better alignment */
     cursor: pointer;
     color: var(--text-color);
     font-size: 11px;
@@ -387,7 +385,7 @@ body {
 }
 
 .menu-category.has-submenu {
-    padding-right: 24px;
+    padding-right: 16px; /* Adjust right padding for alignment */
 }
 
 .chevron-icon {

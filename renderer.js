@@ -200,11 +200,20 @@ function appendToTerminal(text, isError = false) {
     const span = document.createElement('span');
     if (isError) {
         span.classList.add('error');
+        console.error('Terminal Error:', text); // Log errors to console for debugging
     }
     
-    // Ensure proper line endings
-    const formattedText = text.replace(/\r\n/g, '\n');
+    // Ensure proper line endings and preserve whitespace
+    const formattedText = text
+        .replace(/\r\n/g, '\n')  // Normalize line endings
+        .replace(/\n$/, '');     // Remove trailing newline
+    
     span.textContent = formattedText;
+    
+    // Add a newline if the text doesn't end with one
+    if (!text.endsWith('\n')) {
+        span.textContent += '\n';
+    }
     
     terminalOutput.appendChild(span);
     terminalOutput.scrollTop = terminalOutput.scrollHeight;
@@ -462,7 +471,7 @@ document.addEventListener('click', (e) => {
 // Menu state management
 let activeMenu = null;
 let activeSubmenu = null;
-let submenuTimeout = null;
+let submenuTimeout = null; // Declare submenuTimeout at the top level
 
 function showQuickCommandsMenu(e) {
     e.stopPropagation();
@@ -739,3 +748,51 @@ ipcRenderer.on('get-current-directory', () => {
 });
 
 // Update current directory display
+
+quickCommandsMenu.addEventListener('mouseover', (e) => {
+    const menuCategory = e.target.closest('.menu-category');
+    if (!menuCategory) return;
+    // Hide any active submenu before showing a new one
+    const activeSubmenu = quickCommandsMenu.querySelector('.submenu.show');
+    if (activeSubmenu && activeSubmenu !== menuCategory.querySelector('.submenu')) {
+        activeSubmenu.classList.remove('show');
+        activeSubmenu.style.left = '';
+        activeSubmenu.style.top = '';
+    }
+    const submenu = menuCategory.querySelector('.submenu');
+    if (submenu) {
+        clearTimeout(submenuTimeout);
+        submenu.classList.add('show');
+        const menuRect = menuCategory.getBoundingClientRect();
+        const submenuRect = submenu.getBoundingClientRect();
+        const spaceBetweenMenus = 5; // Add a small space between main menu and submenu
+        if (menuRect.right + submenuRect.width > window.innerWidth) {
+            submenu.style.left = `-${submenuRect.width + spaceBetweenMenus}px`;
+        } else {
+            submenu.style.left = `${menuRect.width + spaceBetweenMenus}px`;
+        }
+        const submenuRightEdge = menuRect.left + parseFloat(submenu.style.left) + submenuRect.width;
+        if (submenuRightEdge > window.innerWidth) {
+            submenu.style.left = `${window.innerWidth - submenuRect.width - menuRect.left - spaceBetweenMenus}px`;
+        }
+        const submenuBottomEdge = menuRect.bottom + submenuRect.height;
+        if (submenuBottomEdge > window.innerHeight) {
+            submenu.style.top = `${window.innerHeight - submenuRect.height - menuRect.bottom}px`;
+        } else {
+            submenu.style.top = '0px';
+        }
+    }
+});
+
+quickCommandsMenu.addEventListener('mouseout', (e) => {
+    const menuCategory = e.target.closest('.menu-category');
+    if (!menuCategory) return;
+    const submenu = menuCategory.querySelector('.submenu');
+    if (submenu) {
+        submenuTimeout = setTimeout(() => {
+            submenu.classList.remove('show');
+            submenu.style.left = '';
+            submenu.style.top = '';
+        }, 200);
+    }
+});
