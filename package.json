@@ -1,0 +1,28 @@
+{
+  "name": "developer-toolbox",
+  "version": "1.0.0",
+  "description": "A comprehensive developer toolbox with multiple utilities",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "dev": "electron . --debug",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "developer",
+    "toolbox",
+    "productivity"
+  ],
+  "author": "Your Name",
+  "license": "ISC",
+  "dependencies": {
+    "axios": "^1.4.0",
+    "electron": "^25.0.1",
+    "node-fetch": "^3.3.1",
+    "simple-git": "^2.40.0",
+    "systeminformation": "^5.17.12"
+  },
+  "devDependencies": {
+    "electron-reloader": "^1.2.3"
+  }
+}

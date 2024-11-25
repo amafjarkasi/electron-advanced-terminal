@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Advanced Terminal</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <div class="container">
+        <div class="titlebar">
+            <div class="drag-region">Advanced Terminal</div>
+            <div class="window-controls">
+                <button class="control-button minimize" id="minimize-button">
+                    <i class="fas fa-minus"></i>
+                </button>
+                <button class="control-button maximize" id="maximize-button">
+                    <i class="fas fa-square"></i>
+                </button>
+                <button class="control-button close" id="close-button">
+                    <i class="fas fa-xmark"></i>
+                </button>
+            </div>
+        </div>
+        <div class="terminal-container">
+            <div class="terminal-output" id="terminalOutput"></div>
+            <div class="terminal-input-container">
+                <div class="prompt-info">
+                    <span class="username"></span>@<span class="hostname"></span>:<span class="path"></span>$
+                </div>
+                <div class="input-wrapper">
+                    <input type="text" id="terminalInput" class="terminal-input" autofocus spellcheck="false">
+                </div>
+                <div class="bottom-toolbar">
+                    <button class="toolbar-button" id="quickCommandsBtn" title="Quick Commands">
+                        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M2 4h12M2 8h12M2 12h12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                        </svg>
+                    </button>
+                    <div id="quickCommandsMenu" class="quick-commands-menu">
+                        <div class="menu-category">
+                            Git Commands
+                            <span class="chevron-icon">▶</span>
+                            <div class="submenu">
+                                <div class="menu-item" data-command="git status">Check Status</div>
+                                <div class="menu-item" data-command="git add .">Stage All Changes</div>
+                                <div class="menu-item" data-command="git commit -m &quot;&quot;">Commit Changes</div>
+                                <div class="menu-item" data-command="git push">Push Changes</div>
+                                <div class="menu-item" data-command="git pull">Pull Changes</div>
+                                <div class="menu-item" data-command="git branch">List Branches</div>
+                            </div>
+                        </div>
+                        <div class="menu-category">
+                            NPM Commands
+                            <span class="chevron-icon">▶</span>
+                            <div class="submenu">
+                                <div class="menu-item" data-command="npm install">Install Dependencies</div>
+                                <div class="menu-item" data-command="npm start">Start Project</div>
+                                <div class="menu-item" data-command="npm test">Run Tests</div>
+                                <div class="menu-item" data-command="npm run build">Build Project</div>
+                                <div class="menu-item" data-command="npm update">Update Packages</div>
+                            </div>
+                        </div>
+                        <div class="menu-category">
+                            System Commands
+                            <span class="chevron-icon">▶</span>
+                            <div class="submenu">
+                                <div class="menu-item" data-command="dir /w">List Files</div>
+                                <div class="menu-item" data-command="tasklist">List Processes</div>
+                                <div class="menu-item" data-command="systeminfo">System Info</div>
+                                <div class="menu-item" data-command="netstat -an">Network Status</div>
+                                <div class="menu-item" data-command="ipconfig">IP Configuration</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="terminal-status-bar">
+            <div class="status-left">
+                <button id="clearTerminal" class="status-button">Clear</button>
+                <button id="historyButton" class="status-button">History</button>
+            </div>
+            <div id="historyPopup" class="history-popup">
+                <div class="history-list" id="historyList"></div>
+            </div>
+            <div class="status-right">
+                <button id="settingsBtn" class="status-button" title="Settings">
+                    <i class="fas fa-cog"></i>
+                </button>
+                <span class="status-item process">bash</span>
+                <span class="status-item encoding">UTF-8</span>
+            </div>
+        </div>
+    </div>
+    <script src="renderer.js"></script>
+</body>
+</html>
