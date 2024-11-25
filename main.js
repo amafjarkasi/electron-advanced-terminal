@@ -277,13 +277,15 @@ ipcMain.handle('run-terminal-command', async (event, command) => {
             const { exec } = require('child_process');
             // Use proper PowerShell escaping for paths with spaces
             const escapedPath = currentDirectory.replace(/'/g, "''");
-            const psCommand = `powershell.exe -NoProfile -Command "& {Set-Location '${escapedPath}'; ${command}}"`;
+            
+            // Execute command directly in PowerShell with simpler error handling
+            const psCommand = `powershell.exe -NoProfile -Command "cd '${escapedPath}'; ${command}"`;
             
             exec(psCommand, (error, stdout, stderr) => {
                 if (error) {
                     resolve({
                         success: false,
-                        error: stderr || error.message
+                        error: stderr.trim() || error.message || 'Command failed'
                     });
                 } else {
                     resolve({

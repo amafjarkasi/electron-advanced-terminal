@@ -109,7 +109,15 @@ electron-advanced-terminal/
 └── package.json      # Project dependencies and scripts
 ```
 
-### Configuration Files
+## Recent Updates
+
+### Version 1.0.1
+- 🔧 Improved command execution reliability
+  - Simplified PowerShell command handling
+  - Enhanced error reporting for failed commands
+  - More robust directory navigation
+
+## Configuration Files
 The application stores its configuration in the following locations:
 - Settings: `~/.terminal_config/settings.json`
 - Window State: `~/.terminal_config/window-state.json`
